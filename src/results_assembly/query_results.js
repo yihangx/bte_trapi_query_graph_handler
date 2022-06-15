@@ -1,8 +1,9 @@
 const { cloneDeep, keys, spread, toPairs, values, zip } = require('lodash');
 const debug = require('debug')('bte:biothings-explorer-trapi:QueryResult');
-const LogEntry = require('./log_entry');
+const LogEntry = require('../log_entry');
 const { getScores, calculateScore } = require('./score');
 const { Record } = require('@biothings-explorer/api-response-transform');
+const { getPfocr } = require('./pfocr');
 
 /**
  * @type { Record }
@@ -25,9 +26,14 @@ const { Record } = require('@biothings-explorer/api-response-transform');
  * } EdgeBinding
  *
  * @typedef {
+ *   id: string,
+ * } PFOCR
+ *
+ * @typedef {
  *   node_bindings: Object.<string, NodeBinding[]>,
  *   edge_bindings: Object.<string, EdgeBinding[]>,
- *   score: number
+ *   score: number,
+ *   PFOCR: Object.<string, PFOCR[]>
  * } Result
  */
 
@@ -257,6 +263,7 @@ module.exports = class TrapiResultsAssembler {
 
     const qEdgeIDs = new Set(keys(recordsByQEdgeID));
     const qEdgeCount = qEdgeIDs.size;
+    const extractGeneID = new Set();
 
     // find all QNodes having is_set params
     // NOTE: is_set in the query graph and the JavaScript Set object below refer to different sets.
@@ -380,13 +387,23 @@ module.exports = class TrapiResultsAssembler {
         }) => {
           //debug(`  inputQNodeID: ${inputQNodeID}, inputPrimaryCurie: ${inputPrimaryCurie}, outputQNodeID ${outputQNodeID}, outputPrimaryCurie: ${outputPrimaryCurie}`)
           consolidatedSolutionRecord.inputPrimaryCuries.add(inputPrimaryCurie);
+          if (inputPrimaryCurie.startsWith('NCBIGene')){
+          extractGeneID.add(inputPrimaryCurie);
+          }
           consolidatedSolutionRecord.outputPrimaryCuries.add(outputPrimaryCurie);
+          if (outputPrimaryCurie.startsWith('NCBIGene')){
+          extractGeneID.add(outputPrimaryCurie);
+          }
           consolidatedSolutionRecord.recordHashes.add(recordHash);
         });
         return consolidatedSolutionRecord;
       });
     });
-
+    //Get Gene id from consolidatedSolutionRecord
+    //Then sent it to PFOCR
+    // Connect different sets
+    console.log(extractGeneID);
+    getPfocr(Array.from(extractGeneID));
     let resultsWithoutScore = 0;
     let resultsWithScore = 0;
     /**
@@ -396,7 +413,7 @@ module.exports = class TrapiResultsAssembler {
     this._results = consolidatedSolutions.map((consolidatedSolution) => {
 
       // TODO: replace with better score implementation later
-      const result = {node_bindings: {}, edge_bindings: {}, score: calculateScore(consolidatedSolution, scoreCombos)};
+      const result = {node_bindings: {}, edge_bindings: {}, score: calculateScore(consolidatedSolution, scoreCombos), pfocr: {}};
       if (result.score == 0) {
         resultsWithoutScore++;
       } else {

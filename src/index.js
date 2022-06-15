@@ -3,7 +3,7 @@ var path = require('path');
 const BatchEdgeQueryHandler = require('./batch_edge_query');
 const QueryGraph = require('./query_graph');
 const KnowledgeGraph = require('./graph/knowledge_graph');
-const TrapiResultsAssembler = require('./query_results');
+const TrapiResultsAssembler = require('./results_assembly/query_results');
 const InvalidQueryGraphError = require('./exceptions/invalid_query_graph_error');
 const debug = require('debug')('bte:biothings-explorer-trapi:main');
 const Graph = require('./graph/graph');
@@ -11,7 +11,7 @@ const EdgeManager = require('./edge_manager');
 const _ = require('lodash');
 const QEdge2APIEdgeHandler = require('./qedge2apiedge');
 const LogEntry = require('./log_entry');
-const { redisClient } = require('./redis-client');
+const redisClient = require('./redis-client');
 const config = require('./config');
 const fs = require('fs').promises;
 
