@@ -402,8 +402,17 @@ module.exports = class TrapiResultsAssembler {
     //Get Gene id from consolidatedSolutionRecord
     //Then sent it to PFOCR
     // Connect different sets
-    console.log(extractGeneID);
-    getPfocr(Array.from(extractGeneID));
+    const geneSize = (Array.from(extractGeneID)).length;
+    const maxGeneSize = 100;
+    const multpleResponse = [];
+    if (geneSize <= maxGeneSize) {
+      multpleResponse.push(await getPfocr(Array.from(extractGeneID)));
+    } else {
+      for (let i = 0; i < geneSize; i += maxGeneSize) {
+        const chunk = (Array.from(extractGeneID)).slice(i, i + maxGeneSize);
+        multpleResponse.push(getPfocr(chunk));
+      }
+    }
     let resultsWithoutScore = 0;
     let resultsWithScore = 0;
     /**
@@ -413,13 +422,12 @@ module.exports = class TrapiResultsAssembler {
     this._results = consolidatedSolutions.map((consolidatedSolution) => {
 
       // TODO: replace with better score implementation later
-      const result = {node_bindings: {}, edge_bindings: {}, score: calculateScore(consolidatedSolution, scoreCombos), pfocr: {}};
+      const result = {node_bindings: {}, edge_bindings: {}, score: calculateScore(consolidatedSolution, scoreCombos), pfocr: multpleResponse};
       if (result.score == 0) {
         resultsWithoutScore++;
       } else {
         resultsWithScore++;
       }
-
       consolidatedSolution.forEach(({
         inputQNodeID, outputQNodeID,
         inputPrimaryCuries, outputPrimaryCuries,

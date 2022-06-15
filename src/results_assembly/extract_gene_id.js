@@ -110,6 +110,6 @@ async function extractGeneID() {
           },
         });
         console.log(JSON.stringify(queryResult.getResults()[0]));
-          };
+           };
 
-console.log(extractGeneID());
+ console.log(extractGeneID());
