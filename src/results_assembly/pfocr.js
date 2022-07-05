@@ -16,3 +16,11 @@ async function getPfocr(gene) {
 }
 
 module.exports.getPfocr = getPfocr;
+
+// Test case
+//const ncbiGene = ["ncbigene:10879", "ncbigene:7098"];
+//getPfocr(ncbiGene).then(val => {
+//    console.log(val);
+//    }).catch(e => {
+//    console.log(e);
+//  });

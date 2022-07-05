@@ -5,6 +5,7 @@ const { getScores, calculateScore } = require('./score');
 const { Record } = require('@biothings-explorer/api-response-transform');
 const { getPfocr } = require('./pfocr');
 
+
 /**
  * @type { Record }
  *
@@ -26,14 +27,9 @@ const { getPfocr } = require('./pfocr');
  * } EdgeBinding
  *
  * @typedef {
- *   id: string,
- * } PFOCR
- *
- * @typedef {
  *   node_bindings: Object.<string, NodeBinding[]>,
  *   edge_bindings: Object.<string, EdgeBinding[]>,
- *   score: number,
- *   PFOCR: Object.<string, PFOCR[]>
+ *   score: number
  * } Result
  */
 
@@ -263,7 +259,6 @@ module.exports = class TrapiResultsAssembler {
 
     const qEdgeIDs = new Set(keys(recordsByQEdgeID));
     const qEdgeCount = qEdgeIDs.size;
-    const extractGeneID = new Set();
 
     // find all QNodes having is_set params
     // NOTE: is_set in the query graph and the JavaScript Set object below refer to different sets.
@@ -387,32 +382,13 @@ module.exports = class TrapiResultsAssembler {
         }) => {
           //debug(`  inputQNodeID: ${inputQNodeID}, inputPrimaryCurie: ${inputPrimaryCurie}, outputQNodeID ${outputQNodeID}, outputPrimaryCurie: ${outputPrimaryCurie}`)
           consolidatedSolutionRecord.inputPrimaryCuries.add(inputPrimaryCurie);
-          if (inputPrimaryCurie.startsWith('NCBIGene')){
-          extractGeneID.add(inputPrimaryCurie);
-          }
           consolidatedSolutionRecord.outputPrimaryCuries.add(outputPrimaryCurie);
-          if (outputPrimaryCurie.startsWith('NCBIGene')){
-          extractGeneID.add(outputPrimaryCurie);
-          }
           consolidatedSolutionRecord.recordHashes.add(recordHash);
         });
         return consolidatedSolutionRecord;
       });
     });
-    //Get Gene id from consolidatedSolutionRecord
-    //Then sent it to PFOCR
-    // Connect different sets
-    const geneSize = (Array.from(extractGeneID)).length;
-    const maxGeneSize = 100;
-    const multpleResponse = [];
-    if (geneSize <= maxGeneSize) {
-      multpleResponse.push(await getPfocr(Array.from(extractGeneID)));
-    } else {
-      for (let i = 0; i < geneSize; i += maxGeneSize) {
-        const chunk = (Array.from(extractGeneID)).slice(i, i + maxGeneSize);
-        multpleResponse.push(getPfocr(chunk));
-      }
-    }
+
     let resultsWithoutScore = 0;
     let resultsWithScore = 0;
     /**
@@ -422,12 +398,13 @@ module.exports = class TrapiResultsAssembler {
     this._results = consolidatedSolutions.map((consolidatedSolution) => {
 
       // TODO: replace with better score implementation later
-      const result = {node_bindings: {}, edge_bindings: {}, score: calculateScore(consolidatedSolution, scoreCombos), pfocr: multpleResponse};
+      const result = {node_bindings: {}, edge_bindings: {}, score: calculateScore(consolidatedSolution, scoreCombos)};
       if (result.score == 0) {
         resultsWithoutScore++;
       } else {
         resultsWithScore++;
       }
+
       consolidatedSolution.forEach(({
         inputQNodeID, outputQNodeID,
         inputPrimaryCuries, outputPrimaryCuries,
